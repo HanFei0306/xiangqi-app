@@ -1,0 +1,98 @@
+%% ============================================================
+%% (1) v2026.11.19.1 主流程：玩家落子 → 开局书 → 异步迭代加深 → 分片 yield → 软上限保护
+%% ============================================================
+sequenceDiagram
+    actor U as 玩家
+    participant S as gameStore
+    participant E as EngineImpl
+    participant B as openingBook(前缀Trie)
+    participant SE as Search.rankedMovesAsync
+    participant FS as FastState
+    participant EV as evalTerms + PST
+    participant Y as defaultYield(MessageChannel)
+
+    U->>S: 点击落子
+    S->>E: getBestMoveAsync(state, cfg, yieldFrame)
+    E->>B: bookMoveFor(规范化 history)
+    alt 命中书前缀 且 候选着合法
+        B-->>E: notation（最长前缀 → 权重最高候选）
+        E-->>S: book move（不进搜索，毫秒级）
+    else 完全脱库 或 候选均非法
+        E->>SE: 迭代加深 d=1..depth（共享 ctx + deadline）
+        loop 每个深度 d
+            loop 每个根着（按 TT/weights 排序）
+                SE->>Y: await yieldFrame()（每根着一次）
+                Y-->>SE: 浏览器完成一帧，UI 保持丝滑
+                SE->>FS: doMoveFast：更新 squares/mg/eg/phase/key/kingSq/pieceList
+                SE->>SE: searchNode(PVS/TT/LMR/null/quiescence，ply 递增)
+                SE->>FS: evaluateFastState(leaf)
+                FS->>EV: leafTerms(增量 PST 插值 + 精简机动性/attacks/兵型)
+                EV-->>FS: redScore → rootSign 视角
+                SE->>FS: undoMoveFast（完整回滚）
+                opt 单根着触发 300ms 软上限
+                    SE->>SE: ctx.incomplete=true；partial 留观测；break
+                end
+            end
+            alt ctx.incomplete 或 ctx.aborted
+                SE-->>E: 丢弃本迭代，保留 lastCompleteRanked
+            else 迭代完整
+                SE-->>E: ranked（更新 lastCompleteRanked + previousBest）
+            end
+        end
+        E->>E: selectWithDifficulty(lastCompleteRanked, eff)
+        E-->>S: aiMove
+    end
+    S-->>U: AI 落子动画
+
+%% ============================================================
+%% (2) 提示请求 → 返回着法 + 说明（不受本期改动影响，保留）
+%% ============================================================
+sequenceDiagram
+    actor U as 玩家
+    participant UI as ControlPanel/HintBox
+    participant S as gameStore
+    participant H as Hint
+    participant E as Engine
+    participant T as Tactics
+    participant TM as templates
+
+    U->>UI: 点击「提示」
+    UI->>S: requestHint()
+    S->>H: getHint(state, engine, cfg)
+    H->>E: getBestMove(state, cfg)
+    E-->>H: move
+    H->>T: match(state, move)
+    alt 命中战术模板
+        T-->>H: TacticMatch(kind)
+        H->>TM: render(kind, move)
+        TM-->>H: "弃子引离，抢先夺势" (≤30字)
+    else 普通着法
+        H->>EV: evaluate delta（新评估走 evaluateState）
+        TM-->>H: 基于差值生成 "稳住中路，扩大先手"
+    end
+    H-->>S: HintResult{move, explanation}
+    S-->>UI: 高亮推荐着法 + 显示说明
+    UI-->>U: 展示提示
+
+%% ============================================================
+%% (3) 对局结束 → 自动复盘讲解（不受本期改动影响，保留）
+%% ============================================================
+sequenceDiagram
+    participant S as gameStore
+    participant RP as Replay
+    participant R as rules
+    participant T as Tactics
+    participant TM as templates
+    participant UI as ReplayView
+
+    S->>RP: analyze(history, finalState)
+    loop 每步 history[i]
+        RP->>R: 是否为被将死前一步?
+        RP->>T: match(stateBefore, move)
+        T-->>RP: TacticMatch|null
+        RP->>TM: comment(tag/kind, move)
+        TM-->>RP: 中文得失说明
+    end
+    RP-->>S: ReplayAnnotation[]
+    S-->>UI: 展示关键步标注 + 说明
+    UI-->>用户: 可逐步查看复盘
