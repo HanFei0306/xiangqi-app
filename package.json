@@ -1,0 +1,49 @@
+{
+  "name": "xiangqi-trainer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "version-match": "vite-node probe-version-match-v1198.mts 300 4 master",
+    "version-match:deep": "vite-node probe-version-match-v1198.mts 800 4 master",
+    "version-match:fixed": "vite-node probe-fixed-depth-match.mts 4 4",
+    "sprt": "vite-node probe-sprt-v1200.mts 120 12",
+    "sprt:pikafish": "vite-node probe-pikafish-sprt.mts 8 6",
+    "sprt:pikafish-upgrade": "vite-node probe-pikafish-upgrade.mts 10",
+    "calibrate:tiers": "vite-node probe-tier-calibration.mts",
+    "release-check": "npm run typecheck && npm test && npm run version-match && npm run version-match:deep && npm run version-match:fixed && npm run sprt"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^5.16.7",
+    "@mui/material": "^5.16.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.2"
+  }
+}
