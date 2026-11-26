@@ -1,0 +1,107 @@
+# 象棋训练 App · Git 忽略规则
+# 原则：只入库源码、配置、许可明确的资源与文档；构建产物、安装包、
+# 签名材料、受限权重、本机工具链和一次性 QA 产物全部排除。
+
+# ---------- 依赖 ----------
+node_modules/
+.npm/
+.npm-cache/
+tools/npm-cache/
+
+# ---------- 构建产物 ----------
+dist/
+dist-new/
+build/
+out/
+*.tsbuildinfo
+*.js.map
+*.css.map
+
+# ---------- 安装包 / 签名材料（敏感） ----------
+*.apk
+*.aab
+*.apk.idsig
+*.jks
+*.keystore
+*.keystore.*
+keystore/
+tools/manual-apk/keystore/
+!tools/manual-apk/keystore/README.md
+
+# ---------- 受限权重与引擎二进制 ----------
+*.nnue
+tools/pikafish-net/
+tools/pikafish-src/
+*.so
+*.dex
+*.o
+*.a
+*.class
+
+# ---------- Android 打包中间目录 ----------
+tools/manual-apk/bin/
+tools/manual-apk/obj/
+tools/manual-apk/classes/
+tools/manual-apk/gen/
+tools/manual-apk/stage/
+tools/manual-apk/stage2/
+tools/manual-apk/stage-responsive/
+tools/manual-apk/stage-tmp/
+tools/manual-apk/stage-final/
+tools/manual-apk/verify-delivered/
+tools/manual-apk/assets/
+tools/manual-apk/compiled.flata
+
+# ---------- 本机工具链 ----------
+tools/android-sdk/
+tools/jdk17/
+
+# ---------- 历史备份快照 ----------
+_backup/
+backups/
+*.bak
+*.orig
+
+# ---------- 一次性 QA 脚本与产物 ----------
+cdp-*.mjs
+audit-*.mjs
+probe-*.mts
+bench.mts
+fetch-*.mjs
+verify-*.mjs
+qa-*.mjs
+qa-*.mts
+qa-*.harness.html
+qa-*.harness.tsx
+qa-g-*.mjs
+qa-h-*.mjs
+*-tmp.mjs
+*-shot.mjs
+*-shot-tmp.mjs
+sim-shot.mjs
+theme-shot-tmp.mjs
+board-shot-tmp.mjs
+palette-check.mjs
+qayan2-*.mjs
+qayan2-*.png
+qayan2-*.json
+qa-*.png
+qa-*.json
+visual-*.png
+icon-preview.png
+chrome.err
+dom.html
+
+# ---------- 探针原始数据（可再生成） ----------
+docs/tier-calibration-raw*.json
+
+# ---------- 编辑器 / 系统 ----------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.log
+.env
+.env.local
