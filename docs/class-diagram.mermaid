@@ -1,0 +1,113 @@
+classDiagram
+direction LR
+    class Engine {
+        <<interface>>
+        +getBestMove(state: GameState, cfg: AIConfig) Move
+        +getBestMoveAsync(state: GameState, cfg: AIConfig, yieldFrame: Function) Promise~Move~
+        +evaluate(state: GameState, side: Side) number
+    }
+    class EngineImpl {
+        -delegate: Engine
+        -rng: Function
+        +searchSync(state: GameState, cfg: AIConfig) Move
+        +searchAsync(state: GameState, cfg: AIConfig, yieldFrame: Function) Move
+        -bookMove(state: GameState, cfg: AIConfig) Move
+        -selectWithDifficulty(ranked: ScoredMove[], eff: AIConfig) Move
+    }
+    class AIConfig {
+        +Difficulty difficulty
+        +number depth
+        +number randomness
+        +number mistakeRate
+    }
+    class SearchContext {
+        +Map tt
+        +number deadline
+        +boolean aborted
+        +boolean incomplete
+        +number[] pathKeys
+        +boolean[] pathChecked
+        +number[] seenKeys
+        +boolean[] seenChecked
+        +Array killers
+        +Int32Array history
+        +ScoredMove[] lastCompleteRanked
+        +ScoredMove[] partialRanked
+    }
+    class FastState {
+        +Int8Array squares
+        +number mg
+        +number eg
+        +number phase
+        +number key
+        +Int8Array kingSq
+        +Int8Array pieceList
+        +Int8Array pieceIndex
+    }
+    class Search {
+        +alphabeta(state, depth, alpha, beta, side) number
+        +rankedMoves(state, depth, ctx, alpha, beta) ScoredMove[]
+        +rankedMovesAsync(state, depth, ctx, yieldFrame) ScoredMove[]
+        +createSearchContext(deadline) SearchContext
+        -searchNode(st, turnSign, depth, ply, alpha, beta, rootSign, ctx, allowNull, nullMove) number
+        -quiescence(st, turnSign, alpha, beta, rootSign, ctx, qDepth, ply, checksLeft) number
+    }
+    class PST {
+        +Int16Array PST_MG
+        +Int16Array PST_EG
+        +Int8Array PHASE_WEIGHT
+        +number PHASE_TOTAL
+        +pstIndex(col: number, row: number, isRed: boolean) number
+        +phaseOf(squares: Int8Array) number
+    }
+    class EvalTerms {
+        +leafTerms(st: FastState, rootSign: number) number
+        +fullTerms(st: FastState, rootSign: number) number
+        -mobilityFor(st: FastState, sign: number) number
+        -kingSafetyFor(st: FastState, sign: number, attacks: number) number
+        -pinPenalty(st: FastState, sign: number) number
+        -pawnStructure(st: FastState, sign: number) number
+        -coordination(st: FastState, sign: number) number
+    }
+    class Evaluate {
+        +evaluateState(state: GameState, side: Side, detail: string) number
+        +material(board: Board, side: Side) number
+    }
+    class BookLine {
+        +BookSystem system
+        +string[] moves
+        +number weight
+    }
+    class BookNode {
+        +BookReply[] replies
+        +Map children
+    }
+    class OpeningBook {
+        +Map PREFIX
+        +number MAX_BOOK_PLY
+        +bookMoveFor(history: string[]) string
+        +inBookPhase(history: string[]) boolean
+        +normalizeNotation(text: string) string
+    }
+    class GameState {
+        +Board board
+        +Side turn
+        +Move[] history
+        +GameStatus status
+    }
+
+    Engine <|.. EngineImpl
+    EngineImpl ..> Search
+    EngineImpl ..> OpeningBook
+    EngineImpl ..> Evaluate
+    Search ..> SearchContext
+    Search ..> FastState
+    Search ..> PST
+    Search ..> EvalTerms
+    Evaluate ..> PST
+    Evaluate ..> EvalTerms
+    OpeningBook o-- BookNode
+    BookNode o-- BookLine
+    Engine ..> GameState
+    AIConfig --> Engine
+    GameState ..> FastState
