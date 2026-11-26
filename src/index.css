@@ -1,0 +1,242 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* Last-resort guard: the board is sized to fit the viewport, so a horizontal
+     scrollbar can only mean a layout bug. Never let the whole page pan. */
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  /* v2026.11.25.1 与 SKIN.pageDeep 对齐：过滚动露出的不再是突兀的旧绿。 */
+  background: #0B1D12;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Subtle board drop shadow */
+.board-shadow {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* A piece travelling from its origin to its destination. v1.13 smoothness:
+   ONE continuous interpolation from 0% to 100% with a gentler ease-out curve
+   (0.30, 0.72, 0.28, 1): a softer launch and a zero-velocity landing, so the
+   glide reads as silky rather than snappy. The old 3-stop keyframe restarted
+   the easing at the midpoint and visibly stuttered on Android WebView.
+   Only `transform` is animated (GPU compositing — no layout, no paint); the
+   element owns a layer via `will-change: transform`. The redundant animated
+   drop-shadow filter was removed in v1.13 — the piece token already carries
+   its own static box-shadow, and dropping the extra filter pass avoids a
+   raster round-trip that could drop frames. Duration stays 260ms and the
+   landing ripple / clack stay at 200ms. Board.tsx's MOVE_ANIM_MS must match.
+   v1.14 keeps this travel curve untouched — the rebound lives on a separate
+   inner layer so the glide can never stutter. */
+@keyframes xiangqi-fly {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy));
+  }
+}
+
+.xiangqi-fly {
+  animation: xiangqi-fly 260ms cubic-bezier(0.3, 0.72, 0.28, 1) both;
+  will-change: transform;
+}
+
+/* v1.14 touchdown feel: a tiny lift-and-settle on the piece itself, starting
+   only after the glide is ~78% done (the ease-out has already placed the token
+   essentially on its square). Scale + translateY only — GPU compositing, no
+   layout, no filter, no restart of the travel easing. Same 260ms budget as
+   MOVE_ANIM_MS, so the flight layer is removed only after it finishes. */
+@keyframes xiangqi-land-bounce {
+  0%, 78% { transform: translateY(0) scale(1); }
+  88%     { transform: translateY(-2px) scale(1.06); }
+  100%    { transform: translateY(0) scale(1); }
+}
+
+.xiangqi-land-bounce {
+  animation: xiangqi-land-bounce 260ms linear both;
+  will-change: transform;
+}
+
+/* The captured piece is knocked aside by the impact, then fades away.
+   opacity + transform only — both GPU-compositable. */
+@keyframes xiangqi-capture {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  32%  { opacity: 0.95; transform: translate(calc(var(--cdx) * 0.45), calc(var(--cdy) * 0.45 - 3px)) scale(1.08) rotate(9deg); }
+  100% { opacity: 0; transform: translate(var(--cdx), var(--cdy)) scale(0.5) rotate(28deg); }
+}
+
+.xiangqi-capture {
+  animation: xiangqi-capture 300ms cubic-bezier(0.25, 0.7, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* A soft ring at the impact point. The 200ms delay matches the moment the
+   260ms flight touches down (gameStore LAND_MS = 200). */
+@keyframes xiangqi-land-ripple {
+  0%   { opacity: 0; transform: scale(0.45); }
+  18%  { opacity: 0.62; }
+  100% { opacity: 0; transform: scale(1.38); }
+}
+
+.xiangqi-land-ripple {
+  animation: xiangqi-land-ripple 320ms ease-out 200ms both;
+  border: 2px solid rgba(232, 250, 220, 0.95);
+  /* v2026.11.19.3 锐化：改用实色硬环，去掉模糊光晕——缩放后边缘不发虚。 */
+  box-shadow: 0 0 0 1px rgba(232, 250, 220, 0.7), inset 0 0 0 1px rgba(220, 255, 210, 0.45);
+}
+
+/* Check: a wider amber ripple so the alert reads without a harsh banner. */
+@keyframes xiangqi-alert-wave {
+  0%   { opacity: 0; transform: scale(0.35); }
+  20%  { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+.xiangqi-alert-wave {
+  animation: xiangqi-alert-wave 700ms ease-out 200ms both;
+  border: 3px solid rgba(255, 205, 100, 1);
+  box-shadow: 0 0 0 2px rgba(255, 240, 190, 0.6), 0 0 0 5px rgba(255, 170, 60, 0.35);
+}
+
+/* Mate: one slow golden bloom, then it fades into the felt. */
+@keyframes xiangqi-mate-glow {
+  0%   { opacity: 0; transform: scale(0.4); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.95); }
+}
+
+.xiangqi-mate-glow {
+  animation: xiangqi-mate-glow 1100ms ease-out 200ms both;
+  border: 3px solid rgba(255, 222, 130, 1);
+  box-shadow: 0 0 0 2px rgba(255, 245, 200, 0.65), 0 0 0 6px rgba(255, 196, 70, 0.35);
+}
+
+/* Lifting a piece: it rises off the board. v1.14: a slightly higher lift plus
+   a restrained 3.5% scale make the pick-up unmistakable, while the token's own
+   static box-shadow stack supplies the depth. Transform-only transition — no
+   filter, so selection never triggers a repaint or a composited-filter pass. */
+.xiangqi-picked-up {
+  transform: translateY(-3px) scale(1.035);
+  transform-origin: center center;
+  transition: transform 140ms cubic-bezier(0.22, 0.85, 0.3, 1);
+}
+
+/* v1.14: empty landing points breathe softly so legal moves are discoverable
+   without shouting. Only transform/opacity are animated — the ring's
+   box-shadow stays static and crisp. */
+@keyframes xiangqi-target-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.78; transform: scale(1.12); }
+}
+
+.xiangqi-target-dot {
+  animation: xiangqi-target-pulse 1600ms ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* The selected square keeps a crisp ring and breathes its halo very gently. */
+@keyframes xiangqi-selected-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.72; }
+}
+
+.xiangqi-selected-ring {
+  animation: xiangqi-selected-pulse 1300ms ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* v2026.11.23.4: restrained thinking progress for the native master search.
+   A 2px indeterminate sweep under the opponent bar — no fabricated percent,
+   no text flash, no layout/paint of the board. Transform-only animation. */
+@keyframes xiangqi-thinking-sweep {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(340%); }
+}
+
+.xq-thinking-sweep {
+  animation: xiangqi-thinking-sweep 1500ms ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Respect users who ask for reduced motion: ambient pulses and the thinking
+   sweep stop; the one-shot move feedback keeps its timing contract. */
+@media (prefers-reduced-motion: reduce) {
+  .xiangqi-target-dot,
+  .xiangqi-selected-ring,
+  .xq-thinking-sweep {
+    animation: none;
+  }
+  .xq-thinking-sweep { transform: translateX(60%); }
+}
+
+/* v21.10 震撼杀法特效：多层冲击光环 + 放射光刃 + 书法字回弹。
+   仅 transform / opacity / text-shadow，无 filter/blur，不碰清晰度护栏。 */
+.xq-cue-root {
+  position: absolute; left: 50%; top: 46%; z-index: 40;
+  width: 0; height: 0; pointer-events: none;
+}
+.xq-cue-textwrap {
+  position: absolute; left: 0; top: 0;
+  transform: translate(-50%, -50%);
+  text-align: center; white-space: nowrap;
+}
+.xq-cue-text {
+  font-family: "KaiTi", "STKaiti", "Kaiti SC", "Songti SC", serif;
+  font-weight: 900; letter-spacing: 0.12em; line-height: 1.1;
+  animation: xq-cue-word 1250ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.xq-cue-note {
+  margin-top: 6px; font-size: 13px; font-family: "KaiTi", "STKaiti", serif;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.75);
+  animation: xq-cue-note 1250ms ease-out both;
+}
+.xq-cue-ring {
+  position: absolute; left: 0; top: 0; border-radius: 50%;
+  border-width: 4px; border-style: solid;
+  transform: translate(-50%, -50%); opacity: 0;
+}
+.xq-cue-ring-1 { width: 90px; height: 90px; animation: xq-cue-ring 900ms ease-out 0ms both; }
+.xq-cue-ring-2 { width: 90px; height: 90px; animation: xq-cue-ring 1000ms ease-out 120ms both; }
+.xq-cue-ring-3 { width: 90px; height: 90px; animation: xq-cue-ring 1100ms ease-out 240ms both; }
+.xq-cue-burst {
+  position: absolute; left: 0; top: 0; width: 220px; height: 220px;
+  transform: translate(-50%, -50%) rotate(0deg); opacity: 0;
+  clip-path: polygon(50% 0%, 56% 42%, 100% 50%, 56% 58%, 50% 100%, 44% 58%, 0% 50%, 44% 42%);
+  animation: xq-cue-burst 950ms ease-out both;
+}
+@keyframes xq-cue-word {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-14deg); }
+  18%  { opacity: 1; transform: scale(1.35) rotate(4deg); }
+  32%  { transform: scale(0.96) rotate(-2deg); }
+  45%  { transform: scale(1.06) rotate(0deg); }
+  70%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.12) translateY(-10px); }
+}
+@keyframes xq-cue-note {
+  0%   { opacity: 0; transform: translateY(8px); }
+  35%  { opacity: 1; transform: translateY(0); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes xq-cue-ring {
+  0%   { opacity: 0.9; transform: translate(-50%, -50%) scale(0.3); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.6); }
+}
+@keyframes xq-cue-burst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) rotate(0deg) scale(0.2); }
+  25%  { opacity: 0.55; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(45deg) scale(1.5); }
+}
