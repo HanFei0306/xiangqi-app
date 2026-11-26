@@ -1,0 +1,30 @@
+背景音乐来源与授权（Background Music Credits）
+================================================
+
+本应用内置的 3 首背景音乐均来自 Wikimedia Commons 的自由授权录音，
+为离线内置使用。原作曲者作品均属公有领域；演奏录音的授权如下：
+
+1. moonlight.mp3 —— 德彪西《月光》(Clair de Lune, Suite bergamasque)
+   作曲：Claude Debussy (1862–1918)，作品属公有领域。
+   演奏：Wright Brass, United States Air Force Band of Flight。
+   录音：United States Air Force，公有领域 (Public Domain)。
+   来源：https://commons.wikimedia.org/wiki/File:Clair_de_Lune_-_Wright_Brass_-_United_States_Air_Force_Band_of_Flight.mp3
+
+2. canon.ogg —— 帕赫贝尔《卡农》(Canon in D, P.37)
+   作曲：Johann Pachelbel (1653–1706)，作品属公有领域。
+   演奏录音授权：CC BY-SA 3.0 (Attribution-ShareAlike 3.0 Unported)。
+   来源：https://commons.wikimedia.org/wiki/File:Pachelbel%27s_Canon.ogg
+   许可：https://creativecommons.org/licenses/by-sa/3.0/
+
+3. yangguan.ogg —— 中国古琴曲《阳关三叠》(Guqin - Yangguan Sandie)
+   演奏：Wikimedia Commons 用户 CharlieHuang，自录于家中。
+   录音授权：CC BY-SA 3.0 (Attribution-ShareAlike 3.0 Unported)。
+   来源：https://commons.wikimedia.org/wiki/File:Guqin-Yangguan_Sandie.ogg
+   许可：https://creativecommons.org/licenses/by-sa/3.0/
+
+说明：
+- 用户点名的《松窗棋罢》(HITA 演唱 / 小旭音乐作曲, 2012) 为现代版权
+  歌曲，无自由授权录音可用，故以同为中式古典意境、公有领域古曲的
+  《阳关三叠》替代，界面显示为《阳关三叠》。
+- CC BY-SA 3.0 要求署名并以相同方式共享；以上署名满足其要求。
+- 音乐文件随应用离线内置，不联网加载。
